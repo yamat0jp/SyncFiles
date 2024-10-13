@@ -87,7 +87,7 @@ begin
       if IsArch(s) then
         continue;
       cur := ExtractFileDir(s);
-      text := s + '%s=>' + arch + s + '%s';
+      text := s + '%s => ' + arch + s + '%s';
       cur := mainDir + '\' + s;
       if not DirectoryExists(cur) then
       begin
@@ -220,6 +220,7 @@ begin
   ListBox2.Items.Clear;
   for var s in ListBox1.Items do
     Execute(s);
+  ListBox2.Items.Add(ListBox3.Count.ToString + ' Items');
 end;
 
 procedure TForm1.N5Click(Sender: TObject);
