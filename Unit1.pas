@@ -54,6 +54,9 @@ implementation
 
 uses System.Generics.Collections, System.IOUtils;
 
+const
+  fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64'];
+
 procedure TForm1.disposeItems;
 begin
   for var i := 0 to ListBox3.Count - 1 do
@@ -63,9 +66,9 @@ end;
 
 procedure TForm1.Execute(const Name: string);
 const
-  arch = 'Win64\Release\';
+  version: TArray<string> = ['Debug', 'Release'];
 var
-  str, text, cur: string;
+  str, text, cur, arch: string;
   obj: ^TPair<string, string>;
 begin
   if FileExists(Name) then
@@ -86,28 +89,36 @@ begin
     begin
       if IsArch(s) then
         continue;
-      cur := ExtractFileDir(s);
-      text := s + '%s => ' + arch + s + '%s';
       cur := mainDir + '\' + s;
-      if not DirectoryExists(cur) then
-      begin
-        New(obj);
-        obj^.Key := cur;
-        obj^.Value := mainDir + '\' + arch + s;
-        ListBox2.Items.Add(mainDir + '\' + s);
-        ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
-      end
-      else
-        for var t in GetSameFile(cur).Split([',']) do
+      for var fname in fileArray do
+        for var ver in version do
         begin
-          New(obj);
-          obj^.Key := cur + '\' + t;
-          obj^.Value := mainDir + '\' + arch + s + '\' + t;
-          ListBox2.Items.Add(cur + '\' + t);
-          ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
-            Pointer(obj));
+          arch := fname + '\' + ver;
+          text := s + '%s => ' + arch + '\' + s + '%s';
+          if not DirectoryExists(mainDir + '\' + arch) then
+            continue;
+          if not DirectoryExists(cur) then
+          begin
+            New(obj);
+            obj^.Key := cur;
+            obj^.Value := mainDir + '\' + arch + '\' + s;
+            ListBox2.Items.Add(mainDir + '\' + s);
+            ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
+          end
+          else
+            for var t in GetSameFile(cur).Split([',']) do
+            begin
+              New(obj);
+              obj^.Key := cur + '\' + t;
+              obj^.Value := mainDir + '\' + arch + '\' + s + '\' + t;
+              ListBox2.Items.Add(cur + '\' + t);
+              ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
+                Pointer(obj));
+            end;
         end;
     end;
+    ListBox3.Sorted := true;
+    ListBox3.Sorted := false;
   end;
 end;
 
@@ -169,8 +180,6 @@ begin
 end;
 
 function TForm1.IsArch(const Name: string): Boolean;
-const
-  fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64'];
 begin
   for var s in fileArray do
     if Name = s then
@@ -227,15 +236,19 @@ procedure TForm1.N5Click(Sender: TObject);
 var
   obj: ^TPair<string, string>;
   dir: string;
+  cnt: integer;
 begin
+  cnt := 0;
   for var i := 0 to ListBox3.Count - 1 do
   begin
     Pointer(obj) := ListBox3.Items.Objects[i];
     dir := ExtractFileDir(obj^.Value);
     if not DirectoryExists(dir) then
       MkDir(dir);
-    CopyFile(PChar(obj^.Key), PChar(obj^.Value), false);
+    if CopyFile(PChar(obj^.Key), PChar(obj^.Value), false) then
+      inc(cnt);
   end;
+  ListBox2.Items.Add('é¿çsèIóπ ' + cnt.ToString + ' files Copied');
 end;
 
 procedure TForm1.N6Click(Sender: TObject);
