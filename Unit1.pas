@@ -87,13 +87,13 @@ begin
       if IsArch(s) then
         continue;
       cur := ExtractFileDir(s);
-      text := s + '\%s=>' + arch + s + '\%s';
+      text := s + '%s=>' + arch + s + '%s';
       cur := mainDir + '\' + s;
       if not DirectoryExists(cur) then
       begin
         New(obj);
-        obj^.Key := mainDir;
-        obj^.Value := mainDir + arch + s;
+        obj^.Key := cur;
+        obj^.Value := mainDir + '\' + arch + s;
         ListBox2.Items.Add(mainDir + '\' + s);
         ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
       end
@@ -104,7 +104,8 @@ begin
           obj^.Key := cur + '\' + t;
           obj^.Value := mainDir + '\' + arch + s + '\' + t;
           ListBox2.Items.Add(cur + '\' + t);
-          ListBox3.Items.AddObject(Format(text, [t, t]), Pointer(obj));
+          ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
+            Pointer(obj));
         end;
     end;
   end;
