@@ -103,7 +103,8 @@ begin
             obj^.Key := cur;
             obj^.Value := mainDir + '\' + arch + '\' + s;
             ListBox2.Items.Add(mainDir + '\' + s);
-            ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
+            if FileExists(obj^.Key) then
+              ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
           end
           else
             for var t in GetSameFile(cur).Split([',']) do
@@ -112,8 +113,9 @@ begin
               obj^.Key := cur + '\' + t;
               obj^.Value := mainDir + '\' + arch + '\' + s + '\' + t;
               ListBox2.Items.Add(cur + '\' + t);
-              ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
-                Pointer(obj));
+              if FileExists(obj^.Key) then
+                ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
+                  Pointer(obj));
             end;
         end;
     end;
@@ -172,6 +174,8 @@ begin
         result := rec.Name
       else
         result := result + ',' + rec.Name;
+      if rec.Size > 1000000 then
+        result := result + '(size over)';
       i := FindNext(rec);
     end;
   finally
