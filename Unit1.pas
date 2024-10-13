@@ -174,7 +174,7 @@ begin
         result := rec.Name
       else
         result := result + ',' + rec.Name;
-      if rec.Size > 1000000 then
+      if rec.Size > 4000000 then
         result := result + '(size over)';
       i := FindNext(rec);
     end;
