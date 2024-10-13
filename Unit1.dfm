@@ -24,8 +24,6 @@ object Form1: TForm1
     ItemHeight = 15
     TabOrder = 0
     OnKeyDown = ListBox1KeyDown
-    ExplicitLeft = 1
-    ExplicitTop = -5
   end
   object Panel1: TPanel
     Left = 0

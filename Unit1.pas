@@ -101,8 +101,8 @@ begin
         for var t in GetSameFile(cur).Split([',']) do
         begin
           New(obj);
-          obj^.Key := cur;
-          obj^.Value := cur + '\' + t;
+          obj^.Key := cur + '\' + t;
+          obj^.Value := mainDir + '\' + arch + s + '\' + t;
           ListBox2.Items.Add(cur + '\' + t);
           ListBox3.Items.AddObject(Format(text, [t, t]), Pointer(obj));
         end;
@@ -224,10 +224,14 @@ end;
 procedure TForm1.N5Click(Sender: TObject);
 var
   obj: ^TPair<string, string>;
+  dir: string;
 begin
   for var i := 0 to ListBox3.Count - 1 do
   begin
     Pointer(obj) := ListBox3.Items.Objects[i];
+    dir := ExtractFileDir(obj^.Value);
+    if not DirectoryExists(dir) then
+      MkDir(dir);
     CopyFile(PChar(obj^.Key), PChar(obj^.Value), false);
   end;
 end;
