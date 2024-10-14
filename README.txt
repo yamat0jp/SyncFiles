@@ -4,6 +4,7 @@ SyncFiles
 
 https://sites.google.com/site/delphiuserhotkey/home
 
+
 【取り扱い種別】
 
 フリーソフト
@@ -22,5 +23,5 @@ https://sites.google.com/site/delphiuserhotkey/home
 主にWebBrokerでの開発作業時にDelphiの配置機能に頼らず
 ディレクトリ内部のファイルたちを上書きコピーさせます。
 これにより手作業でのコピーが必要なくなり同期させやすくなります。
-残念ながら現時点ではまだWin64\Releaseにしか対応していません。
+サイズが４MBを超えるファイルはコピーしません。
 
