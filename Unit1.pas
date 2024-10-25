@@ -43,6 +43,7 @@ type
     function IsArch(const Name: string): Boolean;
     procedure disposeItems;
     procedure Execute(const Name: string);
+    function checkTimeStamp(const src, dst: string): Boolean;
   end;
 
 var
@@ -52,10 +53,29 @@ implementation
 
 {$R *.dfm}
 
-uses System.Generics.Collections, System.IOUtils;
+uses System.Generics.Collections, System.IOUtils, System.UITypes;
 
 const
   fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64'];
+
+function TForm1.checkTimeStamp(const src, dst: string): Boolean;
+var
+  LHandle1, LHandle2: integer;
+begin
+  if FileExists(dst) then
+  begin
+    LHandle1 := FileOpen(src, fmOpenRead);
+    LHandle2 := FileOpen(dst, fmOpenRead);
+    try
+      result := FileGetDate(LHandle1) - FileGetDate(LHandle2) > 0;
+    finally
+      FileClose(LHandle1);
+      FileClose(LHandle2);
+    end;
+  end
+  else
+    result := true;
+end;
 
 procedure TForm1.disposeItems;
 begin
@@ -89,20 +109,20 @@ begin
     begin
       if IsArch(s) then
         continue;
-      cur := mainDir + '\' + s;
+      cur := TPath.Combine(mainDir, s);
       for var fname in fileArray do
         for var ver in version do
         begin
-          arch := fname + '\' + ver;
-          text := s + '%s => ' + arch + '\' + s + '%s';
-          if not DirectoryExists(mainDir + '\' + arch) then
+          arch := TPath.Combine(fname, ver);
+          text := s + '%s => ' + TPath.Combine(arch, s) + '%s';
+          if not DirectoryExists(TPath.Combine(mainDir, arch)) then
             continue;
           if not DirectoryExists(cur) then
           begin
             New(obj);
             obj^.Key := cur;
-            obj^.Value := mainDir + '\' + arch + '\' + s;
-            ListBox2.Items.Add(mainDir + '\' + s);
+            obj^.Value := TPath.Combine(mainDir, arch, s);
+            ListBox2.Items.Add(TPath.Combine(mainDir, s));
             if FileExists(obj^.Key) then
               ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
           end
@@ -110,9 +130,9 @@ begin
             for var t in GetSameFile(cur).Split([',']) do
             begin
               New(obj);
-              obj^.Key := cur + '\' + t;
-              obj^.Value := mainDir + '\' + arch + '\' + s + '\' + t;
-              ListBox2.Items.Add(cur + '\' + t);
+              obj^.Key := TPath.Combine(cur, t);
+              obj^.Value := TPath.Combine(mainDir, arch, s, t);
+              ListBox2.Items.Add(TPath.Combine(cur, t));
               if FileExists(obj^.Key) then
                 ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
                   Pointer(obj));
@@ -175,7 +195,7 @@ begin
       else
         result := result + ',' + rec.Name;
       if rec.Size > 4000000 then
-        result := result + '(size over)';
+        result := result + '(size_over)';
       i := FindNext(rec);
     end;
   finally
@@ -241,16 +261,30 @@ var
   obj: ^TPair<string, string>;
   dir: string;
   cnt: integer;
+  bool: Boolean;
 begin
   cnt := 0;
+  bool := false;
   for var i := 0 to ListBox3.Count - 1 do
   begin
     Pointer(obj) := ListBox3.Items.Objects[i];
     dir := ExtractFileDir(obj^.Value);
     if not DirectoryExists(dir) then
       MkDir(dir);
-    if CopyFile(PChar(obj^.Key), PChar(obj^.Value), false) then
-      inc(cnt);
+    if not checkTimeStamp(obj^.Key, obj^.Value) and not bool then
+    begin
+      if MessageDlg('古いファイルで上書きします。それでも実行しますか？' + #13#10 + obj^.Value,
+        TMsgDlgType.mtConfirmation, [mbOK, mbNO], 0, mbNO) = mrOK then
+        bool := true
+      else
+        Exit;
+    end;
+  end;
+  for var i := 0 to ListBox3.Count - 1 do
+  begin
+    Pointer(obj) := ListBox3.Items.Objects[i];
+    CopyFile(PChar(obj^.Key), PChar(obj^.Value), false);
+    inc(cnt);
   end;
   ListBox2.Items.Add('実行終了 ' + cnt.ToString + ' files Copied');
 end;
