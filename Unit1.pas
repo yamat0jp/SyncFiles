@@ -36,14 +36,14 @@ type
     procedure N3Click(Sender: TObject);
   private
     { Private êÈåæ }
-  public
-    { Public êÈåæ }
-    mainDir: string;
-    function GetSameFile(const Name: string): string;
+    function GetSameFile(const Name: string; IsDir: Boolean): string;
     function IsArch(const Name: string): Boolean;
     procedure disposeItems;
     procedure Execute(const Name: string);
     function checkTimeStamp(const src, dst: string): Boolean;
+    procedure Touroku(const full, Name: string);
+  public
+    { Public êÈåæ }
   end;
 
 var
@@ -57,6 +57,7 @@ uses System.Generics.Collections, System.IOUtils, System.UITypes;
 
 const
   fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64'];
+  version: TArray<string> = ['Debug', 'Release'];
 
 function TForm1.checkTimeStamp(const src, dst: string): Boolean;
 var
@@ -85,60 +86,22 @@ begin
 end;
 
 procedure TForm1.Execute(const Name: string);
-const
-  version: TArray<string> = ['Debug', 'Release'];
 var
-  str, text, cur, arch: string;
-  obj: ^TPair<string, string>;
+  str: string;
 begin
   if FileExists(Name) then
+    str := Name
+  else if DirectoryExists(Name) then
   begin
-    mainDir := ExtractFileDir(Name);
-    str := GetSameFile(Name);
-  end
-  else
-  begin
-    mainDir := Name;
-    str := GetSameFile(mainDir);
+    str := GetSameFile(Name, true);
     ListBox2.Items.Add('åüçıÇµÇ‹Ç∑ ... ...');
   end;
   if str <> '' then
   begin
     ListBox2.Items.Add('ìoò^ÇµÇ‹Ç∑');
     for var s in str.Split([',']) do
-    begin
-      if IsArch(s) then
-        continue;
-      cur := TPath.Combine(mainDir, s);
-      for var fname in fileArray do
-        for var ver in version do
-        begin
-          arch := TPath.Combine(fname, ver);
-          text := s + '%s => ' + TPath.Combine(arch, s) + '%s';
-          if not DirectoryExists(TPath.Combine(mainDir, arch)) then
-            continue;
-          if not DirectoryExists(cur) then
-          begin
-            New(obj);
-            obj^.Key := cur;
-            obj^.Value := TPath.Combine(mainDir, arch, s);
-            ListBox2.Items.Add(TPath.Combine(mainDir, s));
-            if FileExists(obj^.Key) then
-              ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(obj));
-          end
-          else
-            for var t in GetSameFile(cur).Split([',']) do
-            begin
-              New(obj);
-              obj^.Key := TPath.Combine(cur, t);
-              obj^.Value := TPath.Combine(mainDir, arch, s, t);
-              ListBox2.Items.Add(TPath.Combine(cur, t));
-              if FileExists(obj^.Key) then
-                ListBox3.Items.AddObject(Format(text, ['\' + t, '\' + t]),
-                  Pointer(obj));
-            end;
-        end;
-    end;
+      if not IsArch(s) then
+        Touroku(Name, s);
     ListBox3.Sorted := true;
     ListBox3.Sorted := false;
   end;
@@ -160,31 +123,21 @@ begin
   disposeItems;
 end;
 
-function TForm1.GetSameFile(const Name: string): string;
+function TForm1.GetSameFile(const Name: string; IsDir: Boolean): string;
 var
   rec: TSearchRec;
   i, data: integer;
   d: string;
 begin
   result := '';
-  if Name = mainDir then
-  begin
-    data := faDirectory;
-    d := Name + '\*';
-  end
-  else
-  begin
-    data := faNormal;
-    if FileExists(Name) then
-      d := Name
-    else
-      d := Name + '\*.*';
-  end;
+  d := Name + '\*';
+  data := faNormal + faDirectory;
   i := FindFirst(d, data, rec);
   try
     while i = 0 do
     begin
-      if (data = faDirectory) and ((rec.Name = '.') or (rec.Name = '..')) then
+      if (IsDir and not DirectoryExists(TPath.Combine(Name, rec.Name))) or
+        (rec.Name = '.') or (rec.Name = '..') then
       begin
         i := FindNext(rec);
         continue;
@@ -296,6 +249,43 @@ begin
     500:
       ListBox2.Width := 150;
   end;
+end;
+
+procedure TForm1.Touroku(const full, Name: string);
+var
+  arch, text, path: string;
+  pair: ^TPair<string, string>;
+begin
+  for var fname in fileArray do
+    for var ver in version do
+    begin
+      arch := TPath.Combine(fname, ver);
+      text := name + '%s => ' + TPath.Combine(arch, name) + '%s';
+      path := TPath.Combine(full, name);
+      if not DirectoryExists(TPath.Combine(full, arch)) then
+        continue;
+      if FileExists(path) then
+      begin
+        if ListBox2.Items.IndexOf(path) = -1 then
+          ListBox2.Items.Add(path);
+        New(pair);
+        pair^.Key := path;
+        pair^.Value := TPath.Combine(full, arch, name);
+        ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(pair));
+      end
+      else
+        for var detail in GetSameFile(path, false).Split([',']) do
+        begin
+          New(pair);
+          pair^.Key := TPath.Combine(full, name, detail);
+          pair^.Value := TPath.Combine(full, arch, name, detail);
+          if ListBox2.Items.IndexOf(pair^.Key) = -1 then
+            ListBox2.Items.Add(pair^.Key);
+          if FileExists(pair^.Key) then
+            ListBox3.Items.AddObject(Format(text, ['\' + detail, '\' + detail]),
+              Pointer(pair));
+        end;
+    end;
 end;
 
 end.
