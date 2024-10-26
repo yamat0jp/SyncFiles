@@ -142,6 +142,11 @@ begin
         i := FindNext(rec);
         continue;
       end;
+      if not IsDir and not FileExists(TPath.Combine(Name, rec.Name)) then
+      begin
+        i := FindNext(rec);
+        continue;
+      end;
       if result = '' then
         result := rec.Name
       else
@@ -279,8 +284,7 @@ begin
           New(pair);
           pair^.Key := TPath.Combine(full, name, detail);
           pair^.Value := TPath.Combine(full, arch, name, detail);
-          if (ListBox2.Items.IndexOf(pair^.Key) = -1) and FileExists(pair^.Key)
-          then
+          if ListBox2.Items.IndexOf(pair^.Key) = -1 then
             ListBox2.Items.Add(pair^.Key);
           if FileExists(pair^.Key) then
             ListBox3.Items.AddObject(Format(text, ['\' + detail, '\' + detail]),
