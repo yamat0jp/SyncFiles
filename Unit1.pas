@@ -184,8 +184,7 @@ begin
   try
     while i = 0 do
     begin
-      if ((data = faDirectory) and ((rec.Name = '.') or (rec.Name = '..'))) or
-        ((data = faDirectory) and (rec.Attr <> faDirectory)) then
+      if (data = faDirectory) and ((rec.Name = '.') or (rec.Name = '..')) then
       begin
         i := FindNext(rec);
         continue;
