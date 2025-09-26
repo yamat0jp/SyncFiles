@@ -25,6 +25,7 @@ object Form1: TForm1
     ItemHeight = 15
     TabOrder = 0
     OnKeyDown = ListBox1KeyDown
+    ExplicitTop = -5
   end
   object Panel1: TPanel
     Left = 0
@@ -50,6 +51,7 @@ object Form1: TForm1
       Height = 277
       Align = alClient
       ItemHeight = 15
+      Sorted = True
       TabOrder = 1
     end
     object Panel2: TPanel

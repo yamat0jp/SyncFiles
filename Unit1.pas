@@ -5,11 +5,17 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, JvComponentBase, JvDragDrop,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs,
   Vcl.StdCtrls, Vcl.Menus, Vcl.ExtCtrls;
 
 type
-  TForm1 = class(TForm)
+  ICode = interface
+    procedure CopyObjectFile(const id: integer);
+    function ListBoxCheckTimeStamp(const id: integer): ICode;
+    function ShowMessBeforeCopy(const bool: Boolean): ICode;
+  end;
+
+  TForm1 = class(TForm, ICode)
     ListBox1: TListBox;
     ListBox2: TListBox;
     FileOpenDialog1: TFileOpenDialog;
@@ -36,13 +42,22 @@ type
     procedure N3Click(Sender: TObject);
   private
     { Private 宣言 }
+    IsShowmessage: Boolean;
     function IsArch(const Name: string): Boolean;
     procedure disposeItems;
     procedure Execute(const Name: string);
     function checkTimeStamp(const src, dst: string): Boolean;
-    procedure Touroku(const full, Name: string);
+    procedure CopyObjectFile(const id: integer);
+    function ListBoxCheckTimeStamp(const id: integer): ICode;
+    function ShowMessBeforeCopy(const bool: Boolean): ICode;
+    procedure Touroku(const fullName: string);
   public
     { Public 宣言 }
+  end;
+
+  TListBoxHelper = class helper for TListBox
+    procedure AddKeyValue(const Key: string; const Value: array of string);
+    procedure checkTimeStamp(const id: integer);
   end;
 
 var
@@ -55,7 +70,8 @@ implementation
 uses System.Generics.Collections, System.IOUtils, System.UITypes, System.Types;
 
 const
-  fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64'];
+  fileArray: TArray<string> = ['Win32', 'Win64', 'Linux32', 'Linux64',
+    'TMSWeb'];
   version: TArray<string> = ['Debug', 'Release'];
 
 function TForm1.checkTimeStamp(const src, dst: string): Boolean;
@@ -77,6 +93,32 @@ begin
     result := true;
 end;
 
+function TForm1.ListBoxCheckTimeStamp(const id: integer): ICode;
+var
+  obj: ^TPair<string, string>;
+  dir: string;
+begin
+  result := Self;
+  Pointer(obj) := ListBox3.Items.Objects[id];
+  dir := ExtractFileDir(obj^.Value);
+  if not DirectoryExists(dir) then
+    MkDir(dir);
+  if not checkTimeStamp(obj^.Key, obj^.Value) and IsShowmessage then
+    if MessageDlg('古いファイルで上書きします。それでも実行しますか？' + #13#10 + obj^.Value,
+      TMsgDlgType.mtConfirmation, [mbOK, mbNO], 0, mbNO) = mrOK then
+      IsShowmessage := false
+    else
+      raise Exception.Create('Exit');
+end;
+
+procedure TForm1.CopyObjectFile(const id: integer);
+var
+  obj: ^TPair<string, string>;
+begin
+  Pointer(obj) := ListBox3.Items.Objects[id];
+  CopyFile(PChar(obj^.Key), PChar(obj^.Value), false);
+end;
+
 procedure TForm1.disposeItems;
 begin
   for var i := 0 to ListBox3.Count - 1 do
@@ -86,13 +128,13 @@ end;
 
 procedure TForm1.Execute(const Name: string);
 var
-  arr: TStringDynArray;
+  arr: TArray<string>;
   str: string;
 begin
   if FileExists(Name) then
   begin
     ListBox2.Items.Add('登録します');
-    Touroku(ExtractFilePath(Name), ExtractFileName(Name));
+    Touroku(Name);
   end
   else if DirectoryExists(Name) then
   begin
@@ -107,11 +149,8 @@ begin
     begin
       str := ExtractFileName(s);
       if not IsArch(str) then
-        Touroku(Name, str);
+        Touroku(Name + str);
     end;
-    Finalize(arr);
-    ListBox3.Sorted := true;
-    ListBox3.Sorted := false;
   end;
 end;
 
@@ -186,32 +225,21 @@ end;
 
 procedure TForm1.N5Click(Sender: TObject);
 var
-  obj: ^TPair<string, string>;
-  dir: string;
   cnt: integer;
-  bool: Boolean;
 begin
   cnt := 0;
-  bool := false;
-  for var i := 0 to ListBox3.Count - 1 do
-  begin
-    Pointer(obj) := ListBox3.Items.Objects[i];
-    dir := ExtractFileDir(obj^.Value);
-    if not DirectoryExists(dir) then
-      MkDir(dir);
-    if not checkTimeStamp(obj^.Key, obj^.Value) and not bool then
-    begin
-      if MessageDlg('古いファイルで上書きします。それでも実行しますか？' + #13#10 + obj^.Value,
-        TMsgDlgType.mtConfirmation, [mbOK, mbNO], 0, mbNO) = mrOK then
-        bool := true
-      else
-        Exit;
-    end;
+  try
+    ShowMessBeforeCopy(true);
+    for var i := 0 to ListBox3.Count - 1 do
+      ListBox3.CheckTimeStamp(i);
+  except
+    on Exception do
+    else
+      raise;
   end;
   for var i := 0 to ListBox3.Count - 1 do
   begin
-    Pointer(obj) := ListBox3.Items.Objects[i];
-    CopyFile(PChar(obj^.Key), PChar(obj^.Value), false);
+    CopyObjectFile(i);
     inc(cnt);
   end;
   ListBox2.Items.Add('実行終了 ' + cnt.ToString + ' files Copied');
@@ -227,42 +255,82 @@ begin
   end;
 end;
 
-procedure TForm1.Touroku(const full, Name: string);
+function TForm1.ShowMessBeforeCopy(const bool: Boolean): ICode;
+begin
+  IsShowmessage := bool;
+  result := Self;
+end;
+
+procedure TForm1.Touroku(const fullName: string);
 var
   arch, text, Path: string;
-  pair: ^TPair<string, string>;
+  full, Name: string;
 begin
+  if ListBox1.Items.IndexOf(fullName) > -1 then
+    Exit;
+  full := ExtractFilePath(fullName);
+  name := ExtractFileName(fullName);
   for var fname in fileArray do
     for var ver in version do
     begin
       arch := TPath.Combine(fname, ver);
       text := name + '%s => ' + TPath.Combine(arch, name) + '%s';
       Path := TPath.Combine(full, name);
+
       if not DirectoryExists(TPath.Combine(full, arch)) then
         continue;
       if FileExists(Path) then
       begin
         if ListBox2.Items.IndexOf(Path) = -1 then
           ListBox2.Items.Add(Path);
-        New(pair);
-        pair^.Key := Path;
-        pair^.Value := TPath.Combine(full, arch, name);
-        ListBox3.Items.AddObject(Format(text, ['', '']), Pointer(pair));
+        ListBox3.Items.Add(Format(text, ['', '']));
+        ListBox3.AddKeyValue(Path, [full, arch, name]);
       end
       else
         for var detail in TDirectory.GetFiles(Path) do
         begin
-          Path := ExtractFileName(detail);
-          New(pair);
-          pair^.Key := detail;
-          pair^.Value := TPath.Combine(full, arch, name, Path);
-          if ListBox2.Items.IndexOf(pair^.Key) = -1 then
-            ListBox2.Items.Add(pair^.Key);
-          if FileExists(pair^.Key) then
-            ListBox3.Items.AddObject(Format(text, ['\' + Path, '\' + Path]),
-              Pointer(pair));
+          if ListBox2.Items.IndexOf(detail) = -1 then
+            ListBox2.Items.Add(detail);
+          if FileExists(detail) then
+          begin
+            ListBox3.Items.Add(Format(text, ['\' + Path, '\' + Path]));
+            ListBox3.AddKeyValue(detail, [full, arch, name, Path]);
+          end;
         end;
     end;
+end;
+
+{ TListBoxHelper }
+
+procedure TListBoxHelper.AddKeyValue(const Key: string;
+const Value: array of string);
+var
+  p: ^TPair<string, string>;
+begin
+  if Items.IndexOf(Key) = -1 then
+  begin
+    New(p);
+    p^.Key := Key;
+    p^.Value := TPath.Combine(Value);
+    Items.Objects[Items.Count - 1] := Pointer(p);
+  end;
+end;
+
+procedure TListBoxHelper.checkTimeStamp(const id: integer);
+var
+  obj: ^TPair<string, string>;
+  dir: string;
+begin
+  Pointer(obj) := Items.Objects[id];
+  dir := ExtractFileDir(obj^.Value);
+  if not DirectoryExists(dir) then
+    MkDir(dir);
+  if not Form1.checkTimeStamp(obj^.Key, obj^.Value) and Form1.IsShowmessage then
+    if MessageDlg('古いファイルで上書きします。それでも実行しますか？' + #13#10 + obj^.Value,
+      TMsgDlgType.mtConfirmation, [mbOK, mbNO], 0, mbNO) = mrOK then
+      Form1.IsShowmessage := false
+    else
+      raise Exception.Create('Exit');
 end;
 
 end.
