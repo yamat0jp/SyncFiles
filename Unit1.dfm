@@ -25,7 +25,6 @@ object Form1: TForm1
     ItemHeight = 15
     TabOrder = 0
     OnKeyDown = ListBox1KeyDown
-    ExplicitTop = -5
   end
   object Panel1: TPanel
     Left = 0
@@ -72,7 +71,6 @@ object Form1: TForm1
   end
   object FileOpenDialog1: TFileOpenDialog
     FavoriteLinks = <>
-    FileName = 'C:\Users\yamat\Documents\GitHub\SyncFiles'
     FileTypes = <
       item
         DisplayName = #23455#34892#12501#12449#12452#12523

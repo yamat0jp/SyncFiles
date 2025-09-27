@@ -149,7 +149,7 @@ begin
     begin
       str := ExtractFileName(s);
       if not IsArch(str) then
-        Touroku(Name + str);
+        Touroku(Name + '\' + str);
     end;
   end;
 end;
@@ -231,7 +231,7 @@ begin
   try
     ShowMessBeforeCopy(true);
     for var i := 0 to ListBox3.Count - 1 do
-      ListBox3.CheckTimeStamp(i);
+      ListBox3.checkTimeStamp(i);
   except
     on Exception do
     else
